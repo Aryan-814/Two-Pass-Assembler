@@ -29,6 +29,8 @@ map<string, pair<int, int>> opcode = {
 
 map<string, int> symbol;
 vector<string> errors;
+vector<string> warnings;
+map<string, bool> label_used;
 map<int, pair<string, string>> instructions; 
 map<int, vector<string>> pc_labels;         
 
@@ -54,11 +56,11 @@ bool checknumber(string &str, int &result){
     return true;
 }
 
-// extract a line
+
 void extract(string line, string &label, string &mnemonic, string &operand, string &extra) {
     label = mnemonic = operand = extra = "";
     
-    // remove comments 
+    // Remove comments 
     size_t comment_pos = line.find(';');
     if (comment_pos != string::npos) {
         line = line.substr(0, comment_pos);
@@ -88,7 +90,7 @@ void first_pass(const string &filename) {
     string line, label, mnemonic, operand, extra;
     int pc = 0, line_number = 0;
 
-    // symbol Table and Internal Form Construction
+    // Processing File
     while (getline(infile, line)) {
         line_number++;
         extract(line, label, mnemonic, operand, extra);
@@ -112,6 +114,8 @@ void first_pass(const string &filename) {
                     symbol[label] = pc; 
                     pc_labels[pc].push_back(label);
                 }
+                // Label usage tracking
+                label_used[label] = false;
             }
         }
 
@@ -183,14 +187,18 @@ bool second_pass(const string &objfile, const string &lstfile) {
                     flag = false;
                     continue; 
                 }
+
+                label_used[operand] = true;
                 int target_address = symbol[operand];
+
+                // Determining operand value
                 if (is_branch_instruction(mnemonic)) {
                     operand_val = target_address - (pc + 1); 
                 } else {
                     operand_val = target_address;
                 }
             } else {
-                operand_val = stoi(operand, nullptr, 0);
+                operand_val = stol(operand, nullptr, 0);
             }
         }
 
@@ -208,6 +216,7 @@ bool second_pass(const string &objfile, const string &lstfile) {
         lst_out << setw(8) << setfill('0') << hex << uppercase << pc << " "
                 << setw(8) << setfill('0') << hex << uppercase << machine_code << " "
                 << mnemonic;
+
         if (operand.size()) lst_out << " " << operand;
         lst_out << endl;
     }
@@ -215,6 +224,14 @@ bool second_pass(const string &objfile, const string &lstfile) {
     bin_out.close();
     lst_out.close();
     return flag;
+}
+
+void checkwarnings(){
+    for (auto &pair : label_used) {
+        if (!pair.second) {
+            warnings.push_back("Warning: Label '" + pair.first + "' was defined but never used.");
+        }
+    }
 }
 
 // Main execution function
@@ -240,11 +257,15 @@ int main(int argc, char* argv[]) {
         bool pass = second_pass(base + ".o", base + ".lst");
         if(pass){
             log_out << "Compiled successfully." << endl;
+            checkwarnings();
+            for (auto &warn : warnings) {
+                log_out << warn << endl;
+            }
         }
     }
 
     if (errors.size()) {
-        for (auto err : errors) {
+        for (auto &err : errors) {
             log_out << err << endl;
         }
     } 

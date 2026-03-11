@@ -1,4 +1,3 @@
-start:
         ldc 0
         ldc i
         stnl 0
