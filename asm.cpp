@@ -1,3 +1,7 @@
+// Two Pass Assembler for Simplex Assembly
+// Project of CS2206 : Computer Architecture - Prof : Dr Jimson Matthew
+//Author : Aryan, Roll No : 2401CS48
+
 #include <bits/stdc++.h>
 using namespace std;
 
@@ -27,11 +31,17 @@ map<string, pair<int, int>> opcode = {
     {"SET", {-2, 1}}
 };
 
+//Stores the label and PC value
 map<string, int> symbol;
+//Stores the errors
 vector<string> errors;
+//Stores the warnings
 vector<string> warnings;
+//Track label use for warning
 map<string, bool> label_used;
+//Stores instructions in internal memory
 map<int, pair<string, string>> instructions; 
+//Stores PC value and corresponding labels
 map<int, vector<string>> pc_labels;         
 
 // Check if a label is valid 
@@ -52,6 +62,7 @@ bool checknumber(string &str, int &result){
     if (*endptr != '\0') {
         return false; 
     }
+
     result = val;
     return true;
 }
@@ -71,6 +82,7 @@ void extract(string line, string &label, string &mnemonic, string &operand, stri
     string remainder = line;
     if (colon_pos != string::npos) {
         label = line.substr(0, colon_pos);
+        //Removing spaces in between
         label.erase(remove_if(label.begin(), label.end(), ::isspace), label.end());
         remainder = line.substr(colon_pos + 1);
     }
@@ -87,24 +99,30 @@ void first_pass(const string &filename) {
         exit(1);
     }
 
+    //Initializing
     string line, label, mnemonic, operand, extra;
     int pc = 0, line_number = 0;
 
     // Processing File
     while (getline(infile, line)) {
+
         line_number++;
         extract(line, label, mnemonic, operand, extra);
 
         // Process the Label 
         if (!label.empty()) {
             if (!checklabel(label)) {
+                //Marks as invalid
                 errors.push_back("Error at line " + to_string(line_number) + ": bogus label name '" + label + "'");
             } else if (symbol.count(label)) {
+                //Finds if a duplicate label is used 
                 errors.push_back("Error at line " + to_string(line_number) + ": duplicate label definition '" + label + "'");
             } else {
+
                 // Determine if this is a SET label or a standard PC label
                 if (mnemonic == "SET" && !operand.empty()) {
                     int val;
+                    //Checks Number format
                     if (checknumber(operand, val)) {
                         symbol[label] = val; 
                     } else {
@@ -114,6 +132,7 @@ void first_pass(const string &filename) {
                     symbol[label] = pc; 
                     pc_labels[pc].push_back(label);
                 }
+
                 // Label usage tracking
                 label_used[label] = false;
             }
@@ -126,38 +145,54 @@ void first_pass(const string &filename) {
             } else {
                 auto inst = opcode[mnemonic];
 
+
                 // Check for syntax errors
-                if (inst.second == 0 && operand.size()) {
+             if (inst.second == 0 && operand.size()) {
+                    //Finds no operand
                     errors.push_back("Error at line " + to_string(line_number) + ": unexpected operand");
                 } else if (inst.second == 1 && operand.empty()) {
+                    //No operand
                     errors.push_back("Error at line " + to_string(line_number) + ": missing operand");
                 } else if (!extra.empty()) {
+                    //Found extra after the operand
                     errors.push_back("Error at line " + to_string(line_number) + ": extra on end of line");
                 }else if(inst.second == 1 && !isalpha(operand[0])){
+                    //Checks format
                     int temp;
                     if (!checknumber(operand, temp)) {
                         errors.push_back("Error at line " + to_string(line_number) + ": invalid number format");
                     }
                 }
+
                 if (mnemonic != "SET") {
                     instructions[pc] = {mnemonic, operand};
                     pc++;
                 }
+
             }
         }
     }
+
     infile.close();
+
 }
 
 // Check if an instruction is a branch type
 bool is_branch_instruction(string &mnemonic) {
-    return (mnemonic == "br" || mnemonic == "brz" || mnemonic == "brlz" || mnemonic == "call");
+
+    if (mnemonic == "br" || mnemonic == "brz" || mnemonic == "brlz" || mnemonic == "call") {
+        return true;
+    } else {
+        return false;
+    }
+
 }
 
 bool second_pass(const string &objfile, const string &lstfile) {
     bool flag = true;
     ofstream bin_out(objfile, ios::binary);
     ofstream lst_out(lstfile);
+
     if (!bin_out.is_open() || !lst_out.is_open()) {
         cerr << "Error: Could not open output files for Pass 2." << endl;
         exit(1);
@@ -183,18 +218,21 @@ bool second_pass(const string &objfile, const string &lstfile) {
         if (operand.size()) {
             if (isalpha(operand[0])) { 
                 if (symbol.count(operand) == 0) {
+                    //Label no found
                     errors.push_back("Error at PC " + to_string(pc) + ": no such label '" + operand + "'");
                     flag = false;
-                    continue; 
                 }
 
+                //Mark the label as used
                 label_used[operand] = true;
                 int target_address = symbol[operand];
 
                 // Determining operand value
                 if (is_branch_instruction(mnemonic)) {
+                    //PC relative Addressing
                     operand_val = target_address - (pc + 1); 
                 } else {
+                    //Absolute Addressing
                     operand_val = target_address;
                 }
             } else {
@@ -257,10 +295,6 @@ int main(int argc, char* argv[]) {
         bool pass = second_pass(base + ".o", base + ".lst");
         if(pass){
             log_out << "Compiled successfully." << endl;
-            checkwarnings();
-            for (auto &warn : warnings) {
-                log_out << warn << endl;
-            }
         }
     }
 
@@ -269,6 +303,13 @@ int main(int argc, char* argv[]) {
             log_out << err << endl;
         }
     } 
+
+    //Write warnings
+    checkwarnings();
+    //Write on the file
+    for (auto &warn : warnings) {
+        log_out << warn << endl;
+    }
     
     log_out.close();
     return 0;

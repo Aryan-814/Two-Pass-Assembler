@@ -1,3 +1,7 @@
+// Emulator for Simplex Assembly
+// Project of CS2206 : Computer Architecture - Prof : Dr Jimson Matthew
+//Author : Aryan, Roll No : 2401CS48
+
 #include<bits/stdc++.h>
 using namespace std;
 
@@ -16,11 +20,7 @@ void printhex(int value) {
     cout << setfill('0') << setw(8) << hex << value;
 }
 
-void load_file() {
-    string filename;
-    cout << "Enter object file name (ex. test.o): ";
-    cin >> filename;
-
+void load_file(string filename) {
     ifstream infile(filename, ios::binary);
     if (!infile.is_open()) {
         cout << "error: could not open file.\n";
@@ -75,8 +75,12 @@ void printisa() {
 }
 
 void dumpmem() {
-    for (int i = 0; i < codesz + 20; i++) {
-        printhex(i); cout << " "; printhex(mem[i]); cout << endl;
+    for (int i = 0; i < mem.size(); i++) {
+        if (i < codesz + 5) {
+            printhex(i); cout << " "; printhex(mem[i]); cout << endl;
+        } else if (mem[i] != 0) {
+            printhex(i); cout << " "; printhex(mem[i]); cout << endl;
+        }
     }
 }
 
@@ -112,11 +116,22 @@ void execute(int trace) {
             break;                                   
         case 2:  //ldl
             memaddr = SP + operand;
-            B = A; A = mem[memaddr]; 
+            B = A; 
+            if (memaddr < 0 || memaddr >= mem.size()) {
+                flag = false;
+                cout << "Memory Fault: Attempted to access invalid address at "; printhex(memaddr); cout << "\n";
+                return ;
+            }
+            A = mem[memaddr]; 
             memtype = 1; memval = A;
             break; 
         case 3:  //stl
             memaddr = SP + operand;
+            if (memaddr < 0 || memaddr >= mem.size()) {
+                flag = false;
+                cout << "Memory Fault: Attempted to access invalid address at "; printhex(memaddr); cout << "\n";
+                return ;
+            }
             memold = mem[memaddr];
             mem[memaddr] = A; 
             A = B; 
@@ -125,12 +140,22 @@ void execute(int trace) {
             break;
         case 4:  //ldnl
             memaddr = A + operand;
+            if (memaddr < 0 || memaddr >= mem.size()) {
+                flag = false;
+                cout << "Memory Fault: Attempted to access invalid address at "; printhex(memaddr); cout << "\n";
+                return ;
+            }
             A = mem[memaddr]; 
             memtype = 1; 
             memval = A;
             break;
         case 5:  //stnl
             memaddr = A + operand;
+            if (memaddr < 0 || memaddr >= mem.size()) {
+                flag = false;
+                cout << "Memory Fault: Attempted to access invalid address at "; printhex(memaddr); cout << "\n";
+                return ;
+            }
             memold = mem[memaddr];
             mem[memaddr] = B; 
             memtype = 2; 
@@ -187,9 +212,11 @@ void execute(int trace) {
     }
 
     if (trace == 2 && memtype == 1) {
+        //Tracking Read
         cout << "Reading memory["; printhex(memaddr);
         cout << "], has value: "; printhex(memval); cout << "\n";
     } else if (trace == 3 && memtype == 2) {
+        //Tracking Write
         cout << "Writing memory["; printhex(memaddr);
         cout << "], from "; printhex(memold);
         cout << " to "; printhex(memval); cout << "\n";
@@ -203,12 +230,19 @@ void run(int trace) {
     while (flag) {
         execute(trace);
     }
+
     cout << "Program halted.\n";
     cout << dec << instcount << " Instructions executed total.\n";
 }
 
-int main() {
-    load_file();
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        cerr << "Use this: " << argv[0] << " <source.o>" << endl;
+        return 0;
+    }
+
+    string filename = argv[1];
+    load_file(filename);
 
     string command;
     while (true) {

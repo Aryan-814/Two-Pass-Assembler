@@ -6,3 +6,4 @@ Error at line 9: extra on end of line
 Error at line 10: bogus label name '0def'
 Error at line 11: bogus mnemonic 'fibble'
 Error at line 12: bogus mnemonic '0def'
+Warning: Label 'label' was defined but never used.
