@@ -1,0 +1,109 @@
+/*****************************************************************************
+TITLE: Claims																																
+AUTHOR: Aryan (2401CS48)
+Declaration of Authorship
+This txt file, claims.txt, is part of the assignment of CS2206 at the department of Computer Science and Engg, IIT Patna . 
+*****************************************************************************/
+
+Files:
+==========
+All the files that I am submitting ( asm.cpp and claims_asm.txt), have my name and student roll number at the start, along with a declaration of authorship.
+
+The evidence for Assembler including the output files from the four test examples given (test1 to test4) and bubblesort has also been uploaded. 
+They are test1(3 output files), test2(1 output file), test3(3 output files), test4(3 output files) and bubblesort(3 output files) and two additional test (with output files). 
+All the test files have been tested and work properly. 
+
+
+Compilation instructions:
+=========================
+
+    g++ asm.cpp -o asm
+    ./asm <filename.asm>
+
+    * You need to create a file naming <filename>.asm and copy paste the code in it as I have read input from it
+    * Example: ./asm <filename>.asm
+    * The input.asm file should be present in same folder as cpp file is present.
+    * Ouput files - if there are errors then <filename>.log and if there are no errors then <filename>.log, <filename>.lst file and <filename>.o file
+
+
+Assumptions:
+============
+    * Mnemonic named “data” is always used to allocate memory variables.
+    * Listing file (.lst) and Object file(.o) are generated only when there are no errors in the input Assembly code, otherwise only Error file (.log) is generated.
+
+
+=============================
+Program format and structure:
+=============================
+1. The Assembler (asm.cpp):
+    * Architecture: Implements a "One Read" Two-Pass Assembler. Pass 1 parses and caches instructions internally into C++ memory (`std::map`) for Pass 2.
+    * Completeness: Every instruction in the SIMPLEX ISA is implemented with accurate expected operand counts.
+    * Advanced Directives: The `SET` instruction is fully implemented (for extra credit) to allow custom label value assignment.
+    * PC-Relative Offsets: Accurately calculates branch offsets relative to `PC + 1` for branch instructions (`br`, `brz`, `brlz`, `call`).
+    * Error Diagnostics: Robustly detects and logs:
+        - Duplicate labels
+        - Bogus label names (non-alphanumeric or starting with a number)
+        - Unexpected or missing operands
+        - Invalid number formats (e.g., malformed hex or string-integer mixes)
+    * Code Quality: Features unused label detection. Labels that are defined but never referenced trigger a Warning in the `.log` file to help identify dead code.
+    * Clean output generation: The listing file (.lst) perfectly aligns the PC, machine code (in 8-character hex), and original instruction for easy debugging.
+
+
+=============================
+Testing:
+=============================
+
+1. The assembler:
+
+I have tested five examples(4 test files and bubblesort) shown as bellow. 
+The errors only occurred in the file test2.asm and the program immediately stopped and all errors were put in .log files. 
+
+The others were tested without any errors detected and produced three output files, listing file, 
+error log file and machine readable object file, for each example.
+
+1)
+#Input: test1.asm
+#Output: 
+a. test1.lst 
+b. test1.log (without any error messages and 1 warnings)
+c. test1.o
+
+2)
+#Input: test2.asm
+#Output: 
+a. test2.log (with error messages in log file)
+
+
+3)
+#Input:asm test3.asm
+#Output: 
+a. test3.lst 
+b. test3.log (without any error messages)
+c. test3.o
+
+4)
+#Input: test4.asm
+#Output: 
+a. test4.lst 
+b. test4.log (without any error messages)
+c. test4.o
+
+5)
+#Input: bubblesort.asm
+#Output: 
+a. bubblesort.lst 
+b. bubblesort.log (without any error messages)
+c. bubblesort.o
+
+Additional Tests:
+=================
+6) 
+#Input: fibonacci.asm
+#Output:
+a. fibonacci.lst 
+b. fibonacci.log (without any error messages)
+c. fibonacci.o
+
+7)
+#Input: fails.asm
+a. fails.log (with no label found error)

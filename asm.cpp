@@ -42,7 +42,11 @@ map<string, bool> label_used;
 //Stores instructions in internal memory
 map<int, pair<string, string>> instructions; 
 //Stores PC value and corresponding labels
-map<int, vector<string>> pc_labels;         
+map<int, vector<string>> pc_labels;  
+//Stores SET directives mapped to their PC
+map<int, vector<string>> setlines;
+vector<int> machine_codes;
+vector<string> lst_lines;
 
 // Check if a label is valid 
 bool checklabel(string &label) {
@@ -125,6 +129,7 @@ void first_pass(const string &filename) {
                     //Checks Number format
                     if (checknumber(operand, val)) {
                         symbol[label] = val; 
+                        setlines[pc].push_back(label + ": SET " + operand);
                     } else {
                         errors.push_back("Error at line " + to_string(line_number) + ": invalid number format '" + operand + "'");
                     }
@@ -188,22 +193,27 @@ bool is_branch_instruction(string &mnemonic) {
 
 }
 
-bool second_pass(const string &objfile, const string &lstfile) {
+bool second_pass() {
     bool flag = true;
-    ofstream bin_out(objfile, ios::binary);
-    ofstream lst_out(lstfile);
-
-    if (!bin_out.is_open() || !lst_out.is_open()) {
-        cerr << "Error: Could not open output files for Pass 2." << endl;
-        exit(1);
-    }
+    // Buffers to hold the output in memory
 
     int total_instructions = instructions.size();
     for (int pc = 0; pc<=total_instructions; pc++) {
         //Output any labels assigned to this PC
         if (pc_labels.count(pc)) {
             for (const string &lbl : pc_labels[pc]) {
-                lst_out << setw(8) << setfill('0') << hex << pc << "         " << lbl << ":" << endl;
+                stringstream line;
+                line << setw(8) << setfill('0') << hex << pc << "         " << lbl << ":";
+                lst_lines.push_back(line.str());
+            }
+        }
+        
+        //Output any SET assigned to this PC
+        if (setlines.count(pc)) {
+            for (const string &set_dir : setlines[pc]) {
+                stringstream line;
+                line << setw(8) << setfill('0') << hex << pc << "         " << set_dir;
+                lst_lines.push_back(line.str());
             }
         }
 
@@ -221,19 +231,19 @@ bool second_pass(const string &objfile, const string &lstfile) {
                     //Label no found
                     errors.push_back("Error at PC " + to_string(pc) + ": no such label '" + operand + "'");
                     flag = false;
-                }
-
-                //Mark the label as used
-                label_used[operand] = true;
-                int target_address = symbol[operand];
-
-                // Determining operand value
-                if (is_branch_instruction(mnemonic)) {
-                    //PC relative Addressing
-                    operand_val = target_address - (pc + 1); 
                 } else {
-                    //Absolute Addressing
-                    operand_val = target_address;
+                    //Mark the label as used
+                    label_used[operand] = true;
+                    int target_address = symbol[operand];
+
+                    // Determining operand value
+                    if (is_branch_instruction(mnemonic)) {
+                        //PC relative Addressing
+                        operand_val = target_address - (pc + 1); 
+                    } else {
+                        //Absolute Addressing
+                        operand_val = target_address;
+                    }
                 }
             } else {
                 operand_val = stol(operand, nullptr, 0);
@@ -248,19 +258,19 @@ bool second_pass(const string &objfile, const string &lstfile) {
             machine_code = ((operand_val & 0xFFFFFF) << 8) | (opc & 0xFF);
         }
 
-        //formatting
-        bin_out.write(reinterpret_cast<const char*>(&machine_code), sizeof(machine_code));
+        // Store into our memory buffers
+        machine_codes.push_back(machine_code);
 
-        lst_out << setw(8) << setfill('0') << hex << uppercase << pc << " "
-                << setw(8) << setfill('0') << hex << uppercase << machine_code << " "
-                << mnemonic;
+        //Formatting
+        stringstream line;
+        line << setw(8) << setfill('0') << hex << uppercase << pc << " "
+             << setw(8) << setfill('0') << hex << uppercase << machine_code << " "
+             << mnemonic;
 
-        if (operand.size()) lst_out << " " << operand;
-        lst_out << endl;
+        if (operand.size()) line << " " << operand;
+        lst_lines.push_back(line.str());
     }
 
-    bin_out.close();
-    lst_out.close();
     return flag;
 }
 
@@ -276,7 +286,7 @@ void checkwarnings(){
 int main(int argc, char* argv[]) {
     if (argc != 2) {
         cerr << "Use this: " << argv[0] << " <source.asm>" << endl;
-        return 0;
+        return 1;
     }
 
     string input_file = argv[1];
@@ -287,26 +297,51 @@ int main(int argc, char* argv[]) {
     ofstream log_out(logfile);
     if (!log_out.is_open()) {
         cerr << "Error: Could not open log file." << endl;
-        return 0;
+        return 1;
     }
 
     first_pass(input_file);
     if(errors.empty()){
-        bool pass = second_pass(base + ".o", base + ".lst");
+        bool pass = second_pass();
         if(pass){
             log_out << "Compiled successfully." << endl;
         }
     }
 
     if (errors.size()) {
+        //Writes the errors in log file
         for (auto &err : errors) {
             log_out << err << endl;
         }
-    } 
+    } else {
+        //Writes the lst and o files
+        string objfile = base + ".o";
+        string lstfile = base + ".lst";
+        ofstream bin_out(objfile, ios::binary);
+        ofstream lst_out(lstfile);
+
+        if (!bin_out.is_open() || !lst_out.is_open()) {
+            cerr << "Error: Could not open output files for Pass 2." << endl;
+            return 1;
+        }
+
+        // Write the binary vector into the .o file
+        for (int code : machine_codes) {
+            bin_out.write(reinterpret_cast<const char*>(&code), sizeof(code));
+        }
+        
+        // Dump the string stream into the .lst file
+        for (string &str : lst_lines) {
+            lst_out << str << endl;
+        }
+
+        bin_out.close();
+        lst_out.close();
+    }   
 
     //Write warnings
     checkwarnings();
-    //Write on the file
+    //Write into the file
     for (auto &warn : warnings) {
         log_out << warn << endl;
     }

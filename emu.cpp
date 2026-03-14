@@ -23,7 +23,7 @@ void printhex(int value) {
 void load_file(string filename) {
     ifstream infile(filename, ios::binary);
     if (!infile.is_open()) {
-        cout << "error: could not open file.\n";
+        cout << "Error: could not open file.\n";
         exit(1);
     }
 
@@ -93,6 +93,7 @@ void execute(int trace) {
 
     // fetch
     int inst = mem[PC];
+    PC++;
     int opcode = inst & 0xFF; // bottom 8 bits
     int operand = inst >> 8;  // top 24 bits
 
@@ -211,18 +212,6 @@ void execute(int trace) {
             break;
     }
 
-    if (trace == 2 && memtype == 1) {
-        //Tracking Read
-        cout << "Reading memory["; printhex(memaddr);
-        cout << "], has value: "; printhex(memval); cout << "\n";
-    } else if (trace == 3 && memtype == 2) {
-        //Tracking Write
-        cout << "Writing memory["; printhex(memaddr);
-        cout << "], from "; printhex(memold);
-        cout << " to "; printhex(memval); cout << "\n";
-    }
-
-    PC++;
     instcount++;
 }
 
@@ -253,31 +242,25 @@ int main(int argc, char* argv[]) {
         cout << "3) -reg : Show registers\n";
         cout << "4) -dump : Memory dump using instruction\n";
         cout << "5) -isa : Show instruction set using\n";
-        cout << "6) -read : Run program and track memory reads\n";  
-        cout << "7) -write : Run program and track memory writes\n";
-        cout << "8) -quit : Exit the Emulator\n";
+        cout << "6) -quit : Exit the Emulator\n";
         cin >> command;
 
-        if (command == "-quit"){
+        if (command == "-quit") {
             break;
-        }else if (command == "-dump"){
+        } else if (command == "-dump") {
             dumpmem();
-        }else if (command == "-reg"){
+        } else if (command == "-reg") {
             showreg();
-        }else if (command == "-t"){
+        }else if (command == "-t") {
             if (flag){
                 execute(1);
                 showreg();
             }else{
                 cout << "Program has already halted.\n";
             }
-        }else if (command == "-read"){
-            run(2);
-        }else if (command == "-write"){
-            run(3);
-        }else if (command == "-run"){
+        } else if (command == "-run") {
             run(0);
-        }else if (command == "-isa"){
+        } else if (command == "-isa") {
             printisa();
         }else{
             cout << "Invalid command.\n";
