@@ -2,7 +2,7 @@
 
 A custom two-pass assembler and interactive CPU emulator for the 32-bit SIMPLEX architecture. Built entirely in C++, this project translates human-readable assembly language into raw machine code and executes it within a simulated memory environment.
 
-## 🚀 Features
+##  Features
 
 ### The Assembler (`asm.cpp`)
 * **Optimized Internal Form:** Uses a highly efficient "One Read" architecture. It parses the source file once into a C++ `std::map` (Internal Form), saving massive File I/O overhead during Pass 2.
@@ -18,7 +18,7 @@ A custom two-pass assembler and interactive CPU emulator for the 32-bit SIMPLEX 
 
 ---
 
-## 🛠️ Build Instructions
+##  Build Instructions
 
 This project requires a standard C++ compiler (like `g++`).
 
@@ -30,7 +30,7 @@ This project requires a standard C++ compiler (like `g++`).
 
 ---
 
-## 💻 Usage Guide
+##  Usage Guide
 
 ### Step 1: Assemble the Code
 Run the assembler on your `.asm` source file. 
@@ -58,7 +58,7 @@ Launch the virtual machine and load your `.o` file:
 
 ---
 
-## 📜 SIMPLEX Instruction Set Architecture (ISA)
+##  SIMPLEX Instruction Set Architecture (ISA)
 
 The SIMPLEX CPU is an accumulator-based machine featuring two primary registers (`A` and `B`), a Program Counter (`PC`), and a Stack Pointer (`SP`). 
 
@@ -90,7 +90,7 @@ Instructions are 32-bit: the lowest 8 bits are the opcode, and the upper 24 bits
 
 ---
 
-## 🧪 Example Programs
+##  Example Programs
 
 Included in this repository are sample `.asm` files to test the system:
 * **`bubble_sort.asm`**: An in-place Bubble Sort algorithm that sorts an array of integers. Best viewed using the `-write` emulator command to watch the array swap in real-time.
